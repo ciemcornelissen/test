@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Heatmap Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 400px; width: 100%; }
+        .controls { margin: 10px 0; }
+        button { margin: 5px; padding: 5px 10px; }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button onclick="testOriginalBehavior()">Test Original (Visible Data Only)</button>
+        <button onclick="testFixedBehavior()">Test Fixed (All Data)</button>
+        <button onclick="zoomIn()">Zoom In</button>
+        <button onclick="zoomOut()">Zoom Out</button>
+    </div>
+    <div id="map"></div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+    <script>
+        let map = L.map('map').setView([40.7128, -74.006], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        
+        let heatmapLayer = null;
+        
+        const testData = [
+            {coords: [40.7128, -74.006], value: 20.68},
+            {coords: [40.7129, -74.0059], value: 20.69},
+            {coords: [40.7130, -74.0061], value: 18.5},
+            {coords: [40.7125, -74.0065], value: 22.1},
+            {coords: [40.7132, -74.0058], value: 19.8},
+            {coords: [40.7140, -74.0070], value: 21.2},
+            {coords: [40.7120, -74.0050], value: 19.1},
+            {coords: [40.7135, -74.0045], value: 20.8},
+            {coords: [40.7115, -74.0075], value: 18.9},
+            {coords: [40.7145, -74.0040], value: 21.8}
+        ];
+        
+        function getVisibleData() {
+            const bounds = map.getBounds();
+            return testData.filter(p => {
+                const lat = p.coords[0];
+                const lng = p.coords[1];
+                return lat >= bounds.getSouth() && lat <= bounds.getNorth() && 
+                       lng >= bounds.getWest() && lng <= bounds.getEast();
+            });
+        }
+        
+        function testOriginalBehavior() {
+            if (heatmapLayer) map.removeLayer(heatmapLayer);
+            
+            const visibleData = getVisibleData();
+            const values = visibleData.map(d => d.value);
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            
+            const normalizedData = visibleData.map(d => [
+                d.coords[0], d.coords[1], (d.value - min) / (max - min || 1)
+            ]);
+            
+            heatmapLayer = L.heatLayer(normalizedData, {
+                radius: 25, blur: 15, max: 1.0
+            }).addTo(map);
+            
+            console.log('Original - Visible data min/max:', min, max, 'Points:', visibleData.length);
+        }
+        
+        function testFixedBehavior() {
+            if (heatmapLayer) map.removeLayer(heatmapLayer);
+            
+            const values = testData.map(d => d.value);
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            
+            const normalizedData = testData.map(d => [
+                d.coords[0], d.coords[1], (d.value - min) / (max - min || 1)
+            ]);
+            
+            heatmapLayer = L.heatLayer(normalizedData, {
+                radius: 25, blur: 15, max: 1.0
+            }).addTo(map);
+            
+            console.log('Fixed - Global min/max:', min, max, 'Points:', testData.length);
+        }
+        
+        function zoomIn() { map.zoomIn(); }
+        function zoomOut() { map.zoomOut(); }
+        
+        // Start with fixed behavior
+        testFixedBehavior();
+    </script>
+</body>
+</html>
