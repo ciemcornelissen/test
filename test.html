@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flexible Grape Quality Heatmap Visualization</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            margin: 10px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-right: 1px solid #dee2e6;
+            overflow-y: auto;
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+            background: #fff;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            border-radius: 0 15px 15px 0;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .control-group h3 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .data-input {
+            margin-bottom: 15px;
+        }
+
+        .data-input textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+
+        .data-input input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background: white;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .toggle-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .toggle-btn {
+            padding: 6px 10px;
+            border: 2px solid #dee2e6;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 11px;
+            font-weight: 500;
+            text-align: center;
+            flex: 1;
+            min-width: 60px;
+        }
+
+        .toggle-btn:hover {
+            border-color: #6c757d;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .toggle-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 15px;
+            margin-right: 8px;
+            border-radius: 3px;
+            border: 1px solid #dee2e6;
+        }
+
+        .stats {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #495057;
+        }
+
+        .title h1 {
+            margin: 0 0 5px 0;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .title p {
+            margin: 0;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .error {
+            color: #dc3545;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+
+        .success {
+            color: #28a745;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+
+        .column-mapping {
+            margin-top: 10px;
+        }
+
+        .column-mapping select {
+            width: 100%;
+            padding: 5px;
+            margin-bottom: 5px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .sample-data {
+            font-size: 10px;
+            color: #6c757d;
+            margin-top: 10px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="title">
+                <h1>Grape Data visualizer</h1>
+                <p>Upload or paste your data</p>
+            </div>
+
+            <div class="control-group">
+                <h3>Data Input</h3>
+                <div class="data-input">
+                    <label>Paste JSON Data:</label>
+                    <textarea id="dataInput" placeholder='[{"coordinates": [lat, lng], "value1": 123, "value2": 456}, ...]'></textarea>
+                    <button class="btn btn-primary" onclick="loadFromText()">Load Data</button>
+                    <button class="btn btn-secondary" onclick="loadSampleData()">Load Sample</button>
+                </div>
+
+                <div class="data-input">
+                    <label>Or Upload CSV/JSON File:</label>
+                    <input type="file" id="fileInput" accept=".csv,.json" onchange="loadFromFile()">
+                </div>
+
+                <div id="dataStatus"></div>
+
+                <div id="columnMapping" class="column-mapping" style="display: none;">
+                    <label>Map Columns:</label>
+                    <select id="latColumn">
+                        <option value="">Select Latitude Column</option>
+                    </select>
+                    <select id="lngColumn">
+                        <option value="">Select Longitude Column</option>
+                    </select>
+                    <select id="idColumn">
+                        <option value="">Select ID Column (optional)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Visualization Mode</h3>
+                <div class="toggle-buttons" id="modeButtons">
+                    <!-- Buttons will be populated dynamically -->
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Map Layer</h3>
+                <div class="toggle-buttons">
+                    <button class="toggle-btn active" onclick="setMapLayer('satellite')">Satellite</button>
+                    <button class="toggle-btn" onclick="setMapLayer('street')">Street</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Legend</h3>
+                <div class="legend" id="legend">
+                    Load data to see legend
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Statistics</h3>
+                <div class="stats" id="stats">
+                    Load data to see statistics
+                </div>
+            </div>
+
+            <div class="sample-data">
+                <strong>Sample Format:</strong><br>
+                JSON: [{"coordinates": [40.7128, -74.006], "brix": 20.68, "acidity": 0.827}]<br><br>
+                CSV: lat,lng,brix,acidity<br>
+                40.7128,-74.006,20.68,0.827
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+    <script>
+        let map, currentMode = null, currentLayer = 'satellite';
+        let markersLayer, heatmapLayer, satelliteLayer, streetLayer;
+        let currentData = [];
+        let availableColumns = [];
+        let columnMapping = {
+            lat: 'lat',
+            lng: 'lng',
+            id: 'id'
+        };
+
+        function initMap() {
+            map = L.map('map', {
+                maxZoom: 25,  // Allow much deeper zoom
+                minZoom: 1    // Allow zooming out globally
+            }).setView([40.7128, -74.006], 2);
+
+            satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri',
+                maxZoom: 25,  // Enable high-resolution satellite imagery
+                maxNativeZoom: 19  // Esri's max native zoom, will interpolate beyond
+            });
+
+            streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 25,  // Enable deep zoom for street view
+                maxNativeZoom: 19  // OSM's max native zoom
+            });
+
+            satelliteLayer.addTo(map);
+            markersLayer = L.layerGroup().addTo(map);
+            heatmapLayer = null;  // Will be created when needed
+
+            showStatus("Load your data to get started!", "info");
+        }
+
+        function showStatus(message, type = "info") {
+            const statusDiv = document.getElementById('dataStatus');
+            statusDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        function loadSampleData() {
+            const sampleData = [
+                {coordinates: [40.7128, -74.006], brix: 20.68, acidity: 0.827, weight: 150, quality: 8.5},
+                {coordinates: [40.7129, -74.0059], brix: 20.69, acidity: 0.809, weight: 165, quality: 8.8},
+                {coordinates: [40.7130, -74.0061], brix: 18.5, acidity: 0.92, weight: 145, quality: 7.2},
+                {coordinates: [40.7125, -74.0065], brix: 22.1, acidity: 0.75, weight: 167, quality: 9.1},
+                {coordinates: [40.7132, -74.0058], brix: 19.8, acidity: 0.88, weight: 134, quality: 7.8}
+            ];
+
+            document.getElementById('dataInput').value = JSON.stringify(sampleData, null, 2);
+            processData(sampleData);
+        }
+
+        function loadFromText() {
+            const input = document.getElementById('dataInput').value.trim();
+            if (!input) {
+                showStatus("Please paste some data first!", "error");
+                return;
+            }
+
+            try {
+                const data = JSON.parse(input);
+                if (Array.isArray(data)) {
+                    processData(data);
+                } else {
+                    showStatus("Data should be an array of objects", "error");
+                }
+            } catch (e) {
+                showStatus("Invalid JSON format: " + e.message, "error");
+            }
+        }
+
+        function loadFromFile() {
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+
+                if (file.name.endsWith('.json')) {
+                    try {
+                        const data = JSON.parse(content);
+                        processData(Array.isArray(data) ? data : [data]);
+                    } catch (err) {
+                        showStatus("Invalid JSON file: " + err.message, "error");
+                    }
+                } else if (file.name.endsWith('.csv')) {
+                    parseCSV(content);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSV(content) {
+            const lines = content.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.trim());
+                const obj = {};
+                headers.forEach((header, index) => {
+                    const value = values[index];
+                    // Try to convert to number if possible
+                    obj[header] = isNaN(value) ? value : parseFloat(value);
+                });
+                data.push(obj);
+            }
+
+            showColumnMapping(headers);
+            currentData = data;
+            showStatus(`Loaded ${data.length} rows. Please map the coordinate columns.`, "success");
+        }
+
+        function showColumnMapping(columns) {
+            const mappingDiv = document.getElementById('columnMapping');
+            const latSelect = document.getElementById('latColumn');
+            const lngSelect = document.getElementById('lngColumn');
+            const idSelect = document.getElementById('idColumn');
+
+            // Clear and populate selects
+            [latSelect, lngSelect, idSelect].forEach(select => {
+                select.innerHTML = '<option value="">Select Column</option>';
+                columns.forEach(col => {
+                    select.innerHTML += `<option value="${col}">${col}</option>`;
+                });
+            });
+
+            // Auto-detect common column names
+            const detectColumn = (keywords, select) => {
+                const match = columns.find(col =>
+                    keywords.some(keyword => col.toLowerCase().includes(keyword.toLowerCase()))
+                );
+                if (match) select.value = match;
+            };
+
+            detectColumn(['lat', 'latitude', 'y'], latSelect);
+            detectColumn(['lng', 'lon', 'longitude', 'x'], lngSelect);
+            detectColumn(['id', 'bunch_id', 'name'], idSelect);
+
+            mappingDiv.style.display = 'block';
+
+            // Add change listeners
+            [latSelect, lngSelect, idSelect].forEach(select => {
+                select.onchange = () => {
+                    if (latSelect.value && lngSelect.value) {
+                        columnMapping.lat = latSelect.value;
+                        columnMapping.lng = lngSelect.value;
+                        columnMapping.id = idSelect.value || null;
+                        processCSVData();
+                    }
+                };
+            });
+        }
+
+        function processCSVData() {
+            const processedData = currentData.map(row => {
+                const processed = {
+                    coordinates: [row[columnMapping.lat], row[columnMapping.lng]]
+                };
+
+                // Copy all other columns
+                Object.keys(row).forEach(key => {
+                    if (key !== columnMapping.lat && key !== columnMapping.lng) {
+                        processed[key] = row[key];
+                    }
+                });
+
+                if (columnMapping.id) {
+                    processed.id = row[columnMapping.id];
+                }
+
+                return processed;
+            });
+
+            processData(processedData);
+        }
+
+        function processData(data) {
+            if (!data || data.length === 0) {
+                showStatus("No data to process!", "error");
+                return;
+            }
+
+            // Validate coordinates
+            const validData = data.filter(item => {
+                if (!item.coordinates || !Array.isArray(item.coordinates) || item.coordinates.length < 2) {
+                    return false;
+                }
+                const [lat, lng] = item.coordinates;
+                return !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+            });
+
+            if (validData.length === 0) {
+                showStatus("No valid coordinates found! Coordinates should be [latitude, longitude]", "error");
+                return;
+            }
+
+            currentData = validData;
+
+            // Extract available numeric columns for visualization
+            availableColumns = [];
+            if (validData.length > 0) {
+                Object.keys(validData[0]).forEach(key => {
+                    if (key !== 'coordinates' && key !== 'id' && key !== 'bunch_id' && typeof validData[0][key] === 'number') {
+                        availableColumns.push(key);
+                    }
+                });
+            }
+
+            updateModeButtons();
+
+            if (availableColumns.length > 0) {
+                currentMode = availableColumns[0];
+                setTimeout(() => {
+                    updateVisualization();
+                    showStatus(`Successfully loaded ${validData.length} data points!`, "success");
+
+                    // Fit map to data bounds
+                    const bounds = validData.map(d => d.coordinates);
+                    map.fitBounds(bounds, {padding: [20, 20]});
+                }, 1); // Delay to allow UI to update
+            } else {
+                showStatus("No numeric columns found for visualization!", "error");
+            }
+
+            document.getElementById('columnMapping').style.display = 'none';
+        }
+
+        function updateModeButtons() {
+            const buttonsDiv = document.getElementById('modeButtons');
+            buttonsDiv.innerHTML = '';
+
+            availableColumns.forEach((col, index) => {
+                const button = document.createElement('button');
+                button.className = `toggle-btn ${index === 0 ? 'active' : ''}`;
+
+                let buttonText = col.replace(/^predicted_|^predict_/, '');
+                buttonText = buttonText.charAt(0).toUpperCase() + buttonText.slice(1);
+
+                button.textContent = buttonText;
+                button.onclick = () => setMode(col);
+                buttonsDiv.appendChild(button);
+            });
+
+            // Add density option
+            const densityBtn = document.createElement('button');
+            densityBtn.className = 'toggle-btn';
+            densityBtn.textContent = 'Density';
+            densityBtn.onclick = () => setMode('density');
+            buttonsDiv.appendChild(densityBtn);
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('#modeButtons .toggle-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            updateVisualization();
+        }
+
+        function setMapLayer(layer) {
+            currentLayer = layer;
+            document.querySelectorAll('.toggle-buttons')[1].querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (layer === 'satellite') {
+                map.removeLayer(streetLayer);
+                map.addLayer(satelliteLayer);
+            } else {
+                map.removeLayer(satelliteLayer);
+                map.addLayer(streetLayer);
+            }
+        }
+
+        function getHeatmapGradient(mode) {
+            switch(mode) {
+                case 'brix':
+                    return {
+                        0.0: '#2166ac',  // Low brix (bad) - blue
+                        0.2: '#5aae61',  // Medium-low - light blue
+                        0.4: '#a6d96a',  // Medium - green
+                        0.6: '#fdae61',  // Medium-high - yellow
+                        0.8: '#f46d43',  // High - orange
+                        1.0: '#d73027'   // Very high (good) - red
+                    };
+                case 'acidity':
+                    return {
+                        0.0: '#762a83',  // Low acidity - purple
+                        0.2: '#9970ab',  // Medium-low - light purple
+                        0.4: '#c2a5cf',  // Medium - lavender
+                        0.6: '#a6dba0',  // Medium-high - light green
+                        0.8: '#5aae61',  // High - green
+                        1.0: '#1b7837'   // Very high - dark green
+                    };
+                case 'weight':
+                    return {
+                        0.0: '#053061',  // Light weight - dark blue
+                        0.2: '#2166ac',  // Low - blue
+                        0.4: '#4393c3',  // Medium-low - light blue
+                        0.6: '#92c5de',  // Medium - very light blue
+                        0.8: '#d1e5f0',  // Medium-high - pale blue
+                        1.0: '#f7f7f7'   // Heavy weight - white
+                    };
+                default:
+                    return {
+                        0.0: '#3388ff',  // Default gradient
+                        0.2: '#44bb44',
+                        0.4: '#ffff44',
+                        0.6: '#ff8844',
+                        0.8: '#ff4444',
+                        1.0: '#aa0000'
+                    };
+            }
+        }
+
+        function interpolateColor(color1, color2, factor) {
+            if (factor === 0) return color1;
+            if (factor === 1) return color2;
+            const result = color1.slice();
+            for (let i = 0; i < 3; i++) {
+                result[i] = Math.round(result[i] + factor * (color2[i] - color1[i]));
+            }
+            return `rgb(${result[0]}, ${result[1]}, ${result[2]})`;
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? [
+                parseInt(result[1], 16),
+                parseInt(result[2], 16),
+                parseInt(result[3], 16)
+            ] : null;
+        }
+
+        function getColorScale(value, min, max, mode) {
+            const gradient = getHeatmapGradient(mode);
+            const normalized = (value - min) / (max - min || 1);
+
+            const sortedStops = Object.keys(gradient).map(parseFloat).sort((a, b) => a - b);
+
+            if (normalized <= sortedStops[0]) {
+                return gradient[sortedStops[0]];
+            }
+            if (normalized >= sortedStops[sortedStops.length - 1]) {
+                return gradient[sortedStops[sortedStops.length - 1]];
+            }
+
+            let lowerStop = sortedStops[0];
+            for (let i = 1; i < sortedStops.length; i++) {
+                const upperStop = sortedStops[i];
+                if (normalized < upperStop) {
+                    const lowerColor = hexToRgb(gradient[lowerStop]);
+                    const upperColor = hexToRgb(gradient[upperStop]);
+                    const range = upperStop - lowerStop;
+                    const rangePct = (normalized - lowerStop) / range;
+                    return interpolateColor(lowerColor, upperColor, rangePct);
+                }
+                lowerStop = upperStop;
+            }
+            return gradient[sortedStops[sortedStops.length - 1]];
+        }
+
+        function updateVisualization() {
+            if (!currentData.length || !currentMode) return;
+
+            // Clear existing layers
+            markersLayer.clearLayers();
+            if (heatmapLayer) {
+                map.removeLayer(heatmapLayer);
+                heatmapLayer = null;
+            }
+
+            let values = currentData.map(d => {
+                if (currentMode === 'density') return 1;
+                return d[currentMode] || 0;
+            });
+
+            // Use global min/max for consistent color scaling across zoom levels
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+
+            if (currentMode === 'density') {
+                // Create density heatmap
+                const heatPoints = currentData.map(d => [d.coordinates[0], d.coordinates[1], 1.0]);
+                heatmapLayer = L.heatLayer(heatPoints, {
+                    radius: 20,
+                    blur: 12,
+                    maxZoom: 25,
+                    minOpacity: 0.1, // Ensure minimum visibility
+                    max: 1.0, // Fixed max to prevent auto-scaling
+                    gradient: {
+                        0.0: '#3388ff',
+                        0.2: '#44bb44',
+                        0.4: '#ffff44',
+                        0.6: '#ff8844',
+                        0.8: '#ff4444',
+                        1.0: '#aa0000'
+                    }
+                }).addTo(map);
+            } else {
+                // Create value-based heatmap with consistent scaling
+                const visibleData = getVisibleData();
+                const normalizedData = visibleData.map((d, index) => {
+                    // Normalize using global min/max, not just visible data
+                    const normalizedValue = (d[currentMode] - min) / (max - min || 1);
+                    return [d.coordinates[0], d.coordinates[1], normalizedValue];
+                });
+
+                heatmapLayer = L.heatLayer(normalizedData, {
+                    radius: 25,
+                    blur: 15,
+                    max: 1.0, // Fixed max to prevent auto-scaling
+                    minOpacity: 0.1,
+                    maxZoom: 25,
+                    gradient: getHeatmapGradient(currentMode)
+                }).addTo(map);
+
+                // Add invisible markers for popups (only for visible data)
+                visibleData.forEach((data, index) => {
+                    const circle = L.circleMarker([data.coordinates[0], data.coordinates[1]], {
+                        radius: 8,
+                        fillColor: 'transparent',
+                        color: 'transparent',
+                        weight: 0,
+                        opacity: 0,
+                        fillOpacity: 0
+                    });
+
+                    // Build popup content
+                    let popupContent = `<strong>Point ${data.id || index + 1}</strong><br>`;
+                    popupContent += `Coordinates: ${data.coordinates[0].toFixed(4)}, ${data.coordinates[1].toFixed(4)}<br>`;
+
+                    availableColumns.forEach(col => {
+                        if (data[col] !== undefined) {
+                            popupContent += `${col}: ${typeof data[col] === 'number' ? data[col].toFixed(2) : data[col]}<br>`;
+                        }
+                    });
+
+                    circle.bindPopup(popupContent);
+                    markersLayer.addLayer(circle);
+                });
+            }
+
+            updateLegend(min, max);
+            updateStats();
+        }
+
+        function getVisibleData() {
+            const bounds = map.getBounds();
+            const west = bounds.getWest();
+            const east = bounds.getEast();
+            const north = bounds.getNorth();
+            const south = bounds.getSouth();
+
+            return currentData.filter(p => {
+                const lat = p.coordinates[0];
+                const lng = p.coordinates[1];
+                return lat >= south && lat <= north && lng >= west && lng <= east;
+            });
+        }
+
+        function updateLegend(min, max) {
+            const legend = document.getElementById('legend');
+
+            if (currentMode === 'density') {
+                const visiblePoints = getVisiblePoints();
+                const totalPoints = currentData.length;
+
+                legend.innerHTML = `
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #3388ff"></div>
+                        <span>Low density areas</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #44bb44"></div>
+                        <span>Medium-low density</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #ffff44"></div>
+                        <span>Medium density</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #ff8844"></div>
+                        <span>Medium-high density</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #aa0000"></div>
+                        <span>High density areas</span>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 11px; color: #666;">
+                        Visible bunches: ${visiblePoints} / Total: ${totalPoints}
+                    </div>
+                `;
+                return;
+            }
+
+            if (min === max) {
+                legend.innerHTML = `<div class="legend-item">All values: ${min.toFixed(2)}</div>`;
+                return;
+            }
+
+            const steps = 5;
+            const stepSize = (max - min) / (steps - 1);
+
+            let legendHTML = '';
+            for (let i = 0; i < steps; i++) {
+                const value = min + i * stepSize;
+                const color = getColorScale(value, min, max, currentMode);
+
+                legendHTML += `
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: ${color}"></div>
+                        <span>${value.toFixed(2)}</span>
+                    </div>
+                `;
+            }
+
+            legend.innerHTML = legendHTML;
+        }
+
+        function calculateDensity() {
+            if (!currentData.length) return [];
+
+            const bounds = map.getBounds();
+            const pixelRadius = 20; // Should roughly match the heatmap's radius for consistency
+            const mapPixelWidth = map.getSize().x;
+
+            if (mapPixelWidth === 0) return []; // Avoid division by zero if map isn't rendered
+
+            const mapLngWidth = bounds.getEast() - bounds.getWest();
+            const lngPerPixel = mapLngWidth / mapPixelWidth;
+            const gridSize = pixelRadius * lngPerPixel;
+
+            const west = bounds.getWest();
+            const east = bounds.getEast();
+            const north = bounds.getNorth();
+            const south = bounds.getSouth();
+
+            const grid = {};
+
+            currentData.forEach(p => {
+                const lat = p.coordinates[0];
+                const lng = p.coordinates[1];
+
+                if (lat >= south && lat <= north && lng >= west && lng <= east) {
+                    const gridX = Math.floor((lng - west) / gridSize);
+                    const gridY = Math.floor((lat - south) / gridSize); // Note: lat/lng grid is not perfectly square
+                    const key = `${gridX}-${gridY}`;
+                    grid[key] = (grid[key] || 0) + 1;
+                }
+            });
+
+            return Object.values(grid);
+        }
+
+        function getVisiblePoints() {
+            const bounds = map.getBounds();
+            const west = bounds.getWest();
+            const east = bounds.getEast();
+            const north = bounds.getNorth();
+            const south = bounds.getSouth();
+
+            return currentData.filter(p => {
+                const lat = p.coordinates[0];
+                const lng = p.coordinates[1];
+                return lat >= south && lat <= north && lng >= west && lng <= east;
+            }).length;
+        }
+
+        function updateStats() {
+            const stats = document.getElementById('stats');
+
+            let statsHTML = `<div class="stat-item"><span>Total Points:</span><span>${currentData.length}</span></div>`;
+
+            availableColumns.forEach(col => {
+                const values = currentData.map(d => d[col]).filter(v => v !== undefined && v !== null);
+                if (values.length > 0) {
+                    const avg = values.reduce((a, b) => a + b, 0) / values.length;
+                    const min = Math.min(...values);
+                    const max = Math.max(...values);
+
+                    statsHTML += `
+                        <div class="stat-item">
+                            <span>${col} (avg):</span>
+                            <span>${avg.toFixed(2)}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>${col} (range):</span>
+                            <span>${min.toFixed(1)}-${max.toFixed(1)}</span>
+                        </div>
+                    `;
+                }
+            });
+
+            stats.innerHTML = statsHTML;
+        }
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>
