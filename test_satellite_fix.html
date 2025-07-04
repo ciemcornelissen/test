@@ -53,15 +53,25 @@
             if (satelliteLayer && map.hasLayer(satelliteLayer)) {
                 console.log('Removing old satellite layer');
                 map.removeLayer(satelliteLayer);
+                // Force cleanup of tile cache for the old layer
+                if (satelliteLayer._tiles) {
+                    Object.values(satelliteLayer._tiles).forEach(tile => {
+                        if (tile.el && tile.el.parentNode) {
+                            tile.el.parentNode.removeChild(tile.el);
+                        }
+                    });
+                    satelliteLayer._tiles = {};
+                }
                 // Clear the layer reference to ensure clean removal
                 satelliteLayer = null;
             }
             
             // Create a new satellite layer with the new year and enhanced cache-busting
             const baseUrl = getSatelliteLayerUrl(year);
-            // Add cache-busting parameter with timestamp
-            const cacheBuster = Date.now();
-            const urlWithCacheBuster = baseUrl + (baseUrl.includes('?') ? '&' : '?') + `cb=${cacheBuster}`;
+            // Multi-level cache-busting: timestamp + random + year-specific seed
+            const cacheBuster = Date.now() + Math.random().toString(36).substring(2);
+            const yearSeed = year + '_' + Math.floor(Date.now() / 1000); // Changes every second
+            const urlWithCacheBuster = baseUrl + (baseUrl.includes('?') ? '&' : '?') + `cb=${cacheBuster}&ys=${yearSeed}`;
             console.log(`Creating new satellite layer with cache-busted URL: ${urlWithCacheBuster}`);
             
             satelliteLayer = L.tileLayer(urlWithCacheBuster, {
@@ -74,7 +84,9 @@
                 updateWhenZooming: false,
                 keepBuffer: 0,
                 // Force immediate tile loading
-                detectRetina: false
+                detectRetina: false,
+                // Add unique ID to prevent caching conflicts
+                id: 'satellite_' + year + '_' + Date.now()
             });
             
             // Add the new layer
@@ -85,15 +97,25 @@
                 // Force map to redraw and clear tile cache
                 satelliteLayer.redraw();
                 map.invalidateSize();
-                // Force all tiles to reload by changing the map view slightly and back
+                
+                // Force all tiles to reload by changing the map view and zoom
                 const center = map.getCenter();
                 const zoom = map.getZoom();
-                map.setView([center.lat + 0.000001, center.lng + 0.000001], zoom);
+                
+                // Multiple refresh strategies to break cache
+                map.setView([center.lat + 0.00001, center.lng + 0.00001], zoom + 0.1);
                 setTimeout(() => {
-                    map.setView(center, zoom);
-                    console.log(`Satellite layer refresh completed for year ${year}`);
-                }, 50);
-            }, 100);
+                    map.setView([center.lat - 0.00001, center.lng - 0.00001], zoom - 0.1);
+                    setTimeout(() => {
+                        map.setView(center, zoom);
+                        // Final forced redraw
+                        setTimeout(() => {
+                            satelliteLayer.redraw();
+                            console.log(`Satellite layer refresh completed for year ${year}`);
+                        }, 100);
+                    }, 100);
+                }, 100);
+            }, 200);
             
             // Update status
             updateStatus();
