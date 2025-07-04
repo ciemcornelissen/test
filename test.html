@@ -296,6 +296,9 @@
                         <option value="2020">2020</option>
                         <option value="2019">2019</option>
                         <option value="2018">2018</option>
+                        <option value="2015">2015</option>
+                        <option value="2012">2012</option>
+                        <option value="2009">2009</option>
                     </select>
                 </div>
             </div>
@@ -345,11 +348,14 @@
             const yearMapping = {
                 'current': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                 '2023': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/{z}/{y}/{x}',
-                '2022': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/{z}/{y}/{x}',
-                '2021': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R01/MapServer/tile/{z}/{y}/{x}',
-                '2020': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R02/MapServer/tile/{z}/{y}/{x}',
-                '2019': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R03/MapServer/tile/{z}/{y}/{x}',
-                '2018': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R04/MapServer/tile/{z}/{y}/{x}'
+                '2022': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R01/MapServer/tile/{z}/{y}/{x}',
+                '2021': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R02/MapServer/tile/{z}/{y}/{x}',
+                '2020': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R03/MapServer/tile/{z}/{y}/{x}',
+                '2019': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R04/MapServer/tile/{z}/{y}/{x}',
+                '2018': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R05/MapServer/tile/{z}/{y}/{x}',
+                '2015': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R06/MapServer/tile/{z}/{y}/{x}',
+                '2012': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R07/MapServer/tile/{z}/{y}/{x}',
+                '2009': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R08/MapServer/tile/{z}/{y}/{x}'
             };
             
             return yearMapping[year] || yearMapping['current'];
