@@ -286,6 +286,21 @@
             </div>
 
             <div class="control-group">
+                <h3>Satellite Year</h3>
+                <div class="data-input">
+                    <select id="satelliteYear" onchange="setSatelliteYear(this.value)">
+                        <option value="current">Current (Latest)</option>
+                        <option value="2023">2023</option>
+                        <option value="2022">2022</option>
+                        <option value="2021">2021</option>
+                        <option value="2020">2020</option>
+                        <option value="2019">2019</option>
+                        <option value="2018">2018</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
                 <h3>Legend</h3>
                 <div class="legend" id="legend">
                     Load data to see legend
@@ -315,7 +330,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
     <script>
-        let map, currentMode = null, currentLayer = 'satellite';
+        let map, currentMode = null, currentLayer = 'satellite', currentSatelliteYear = 'current';
         let markersLayer, heatmapLayer, satelliteLayer, streetLayer;
         let currentData = [];
         let availableColumns = [];
@@ -325,13 +340,28 @@
             id: 'id'
         };
 
+        function getSatelliteLayerUrl(year) {
+            // Map years to Esri Wayback release IDs
+            const yearMapping = {
+                'current': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                '2023': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/{z}/{y}/{x}',
+                '2022': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/{z}/{y}/{x}',
+                '2021': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R01/MapServer/tile/{z}/{y}/{x}',
+                '2020': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R02/MapServer/tile/{z}/{y}/{x}',
+                '2019': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R03/MapServer/tile/{z}/{y}/{x}',
+                '2018': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R04/MapServer/tile/{z}/{y}/{x}'
+            };
+            
+            return yearMapping[year] || yearMapping['current'];
+        }
+
         function initMap() {
             map = L.map('map', {
                 maxZoom: 25,  // Allow much deeper zoom
                 minZoom: 1    // Allow zooming out globally
             }).setView([40.7128, -74.006], 2);
 
-            satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            satelliteLayer = L.tileLayer(getSatelliteLayerUrl(currentSatelliteYear), {
                 attribution: '© Esri',
                 maxZoom: 25,  // Enable high-resolution satellite imagery
                 maxNativeZoom: 19  // Esri's max native zoom, will interpolate beyond
@@ -594,6 +624,27 @@
             } else {
                 map.removeLayer(satelliteLayer);
                 map.addLayer(streetLayer);
+            }
+        }
+
+        function setSatelliteYear(year) {
+            currentSatelliteYear = year;
+            
+            // Remove the current satellite layer if it's active
+            if (currentLayer === 'satellite' && map.hasLayer(satelliteLayer)) {
+                map.removeLayer(satelliteLayer);
+            }
+            
+            // Create a new satellite layer with the new year
+            satelliteLayer = L.tileLayer(getSatelliteLayerUrl(year), {
+                attribution: '© Esri',
+                maxZoom: 25,
+                maxNativeZoom: 19
+            });
+            
+            // Add the new layer if satellite is currently selected
+            if (currentLayer === 'satellite') {
+                map.addLayer(satelliteLayer);
             }
         }
 
