@@ -641,21 +641,28 @@
             if (satelliteLayer && map.hasLayer(satelliteLayer)) {
                 console.log('Removing old satellite layer');
                 map.removeLayer(satelliteLayer);
+                // Clear the layer reference to ensure clean removal
+                satelliteLayer = null;
             }
             
-            // Create a new satellite layer with the new year and cache-busting
-            const newUrl = getSatelliteLayerUrl(year);
-            console.log(`Creating new satellite layer with URL: ${newUrl}`);
+            // Create a new satellite layer with the new year and enhanced cache-busting
+            const baseUrl = getSatelliteLayerUrl(year);
+            // Add cache-busting parameter with timestamp
+            const cacheBuster = Date.now();
+            const urlWithCacheBuster = baseUrl + (baseUrl.includes('?') ? '&' : '?') + `cb=${cacheBuster}`;
+            console.log(`Creating new satellite layer with cache-busted URL: ${urlWithCacheBuster}`);
             
-            satelliteLayer = L.tileLayer(newUrl, {
+            satelliteLayer = L.tileLayer(urlWithCacheBuster, {
                 attribution: '© Esri',
                 maxZoom: 25,
                 maxNativeZoom: 19,
-                // Add cache-busting to force refresh of tiles
+                // Enhanced cache-busting options
                 crossOrigin: true,
                 updateWhenIdle: false,
                 updateWhenZooming: false,
-                keepBuffer: 0
+                keepBuffer: 0,
+                // Force immediate tile loading
+                detectRetina: false
             });
             
             // Add the new layer if satellite is currently selected
@@ -663,11 +670,19 @@
                 console.log('Adding new satellite layer to map');
                 map.addLayer(satelliteLayer);
                 
-                // Force complete tile refresh with multiple methods
+                // Enhanced refresh mechanism with multiple methods
                 setTimeout(() => {
+                    // Force map to redraw and clear tile cache
                     satelliteLayer.redraw();
                     map.invalidateSize();
-                    console.log('Satellite layer refresh completed');
+                    // Force all tiles to reload by changing the map view slightly and back
+                    const center = map.getCenter();
+                    const zoom = map.getZoom();
+                    map.setView([center.lat + 0.000001, center.lng + 0.000001], zoom);
+                    setTimeout(() => {
+                        map.setView(center, zoom);
+                        console.log(`Satellite layer refresh completed for year ${year}`);
+                    }, 50);
                 }, 100);
             }
         }
