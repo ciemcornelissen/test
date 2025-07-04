@@ -634,25 +634,41 @@
         }
 
         function setSatelliteYear(year) {
+            console.log(`Changing satellite year from ${currentSatelliteYear} to ${year}`);
             currentSatelliteYear = year;
             
-            // Remove the current satellite layer if it's active
-            if (currentLayer === 'satellite' && map.hasLayer(satelliteLayer)) {
+            // Always remove the current satellite layer if it exists
+            if (satelliteLayer && map.hasLayer(satelliteLayer)) {
+                console.log('Removing old satellite layer');
                 map.removeLayer(satelliteLayer);
             }
             
-            // Create a new satellite layer with the new year
-            satelliteLayer = L.tileLayer(getSatelliteLayerUrl(year), {
+            // Create a new satellite layer with the new year and cache-busting
+            const newUrl = getSatelliteLayerUrl(year);
+            console.log(`Creating new satellite layer with URL: ${newUrl}`);
+            
+            satelliteLayer = L.tileLayer(newUrl, {
                 attribution: '© Esri',
                 maxZoom: 25,
-                maxNativeZoom: 19
+                maxNativeZoom: 19,
+                // Add cache-busting to force refresh of tiles
+                crossOrigin: true,
+                updateWhenIdle: false,
+                updateWhenZooming: false,
+                keepBuffer: 0
             });
             
             // Add the new layer if satellite is currently selected
             if (currentLayer === 'satellite') {
+                console.log('Adding new satellite layer to map');
                 map.addLayer(satelliteLayer);
-                // Force the layer to redraw to refresh tiles and bypass cache
-                satelliteLayer.redraw();
+                
+                // Force complete tile refresh with multiple methods
+                setTimeout(() => {
+                    satelliteLayer.redraw();
+                    map.invalidateSize();
+                    console.log('Satellite layer refresh completed');
+                }, 100);
             }
         }
 
@@ -980,7 +996,20 @@
             stats.innerHTML = statsHTML;
         }
 
-        window.onload = initMap;
+        function syncSatelliteYearDropdown() {
+            const dropdown = document.getElementById('satelliteYear');
+            if (dropdown) {
+                dropdown.value = currentSatelliteYear;
+                console.log(`Synced dropdown to current year: ${currentSatelliteYear}`);
+            }
+        }
+
+        function initializeApp() {
+            initMap();
+            syncSatelliteYearDropdown();
+        }
+
+        window.onload = initializeApp;
     </script>
 </body>
 </html>
