@@ -357,11 +357,18 @@
 
         function loadSampleData() {
             const sampleData = [
+                // New York area - concentrated points for zoom testing
                 {coordinates: [40.7128, -74.006], brix: 20.68, acidity: 0.827, weight: 150, quality: 8.5},
                 {coordinates: [40.7129, -74.0059], brix: 20.69, acidity: 0.809, weight: 165, quality: 8.8},
                 {coordinates: [40.7130, -74.0061], brix: 18.5, acidity: 0.92, weight: 145, quality: 7.2},
                 {coordinates: [40.7125, -74.0065], brix: 22.1, acidity: 0.75, weight: 167, quality: 9.1},
-                {coordinates: [40.7132, -74.0058], brix: 19.8, acidity: 0.88, weight: 134, quality: 7.8}
+                {coordinates: [40.7132, -74.0058], brix: 19.8, acidity: 0.88, weight: 134, quality: 7.8},
+                // Additional spread out points for better testing
+                {coordinates: [40.7140, -74.0070], brix: 21.2, acidity: 0.85, weight: 155, quality: 8.2},
+                {coordinates: [40.7120, -74.0050], brix: 19.1, acidity: 0.91, weight: 142, quality: 7.5},
+                {coordinates: [40.7135, -74.0045], brix: 20.8, acidity: 0.79, weight: 162, quality: 8.9},
+                {coordinates: [40.7115, -74.0075], brix: 18.9, acidity: 0.95, weight: 138, quality: 7.1},
+                {coordinates: [40.7145, -74.0040], brix: 21.8, acidity: 0.72, weight: 171, quality: 9.3}
             ];
 
             document.getElementById('dataInput').value = JSON.stringify(sampleData, null, 2);
@@ -717,8 +724,8 @@
                 }).addTo(map);
             } else {
                 // Create value-based heatmap with consistent scaling
-                const visibleData = getVisibleData();
-                const normalizedData = visibleData.map((d, index) => {
+                // Use ALL data points to maintain consistent color scaling across zoom levels
+                const normalizedData = currentData.map((d, index) => {
                     // Normalize using global min/max, not just visible data
                     const normalizedValue = (d[currentMode] - min) / (max - min || 1);
                     return [d.coordinates[0], d.coordinates[1], normalizedValue];
@@ -733,7 +740,8 @@
                     gradient: getHeatmapGradient(currentMode)
                 }).addTo(map);
 
-                // Add invisible markers for popups (only for visible data)
+                // Add invisible markers for popups (only for visible data for performance)
+                const visibleData = getVisibleData();
                 visibleData.forEach((data, index) => {
                     const circle = L.circleMarker([data.coordinates[0], data.coordinates[1]], {
                         radius: 8,
