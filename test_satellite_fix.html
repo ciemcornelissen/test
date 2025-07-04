@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Satellite Year Fix Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #map { height: 400px; width: 100%; margin: 20px 0; border: 1px solid #ccc; }
+        .controls { margin: 10px 0; }
+        .status { padding: 10px; background: #f0f0f0; border-radius: 5px; margin: 10px 0; }
+        button, select { margin: 5px; padding: 5px 10px; }
+    </style>
+</head>
+<body>
+    <h1>Satellite Year Change Fix Test</h1>
+    <div class="controls">
+        <label>Satellite Year: </label>
+        <select id="satelliteYear" onchange="setSatelliteYear(this.value)">
+            <option value="current">Current (Latest)</option>
+            <option value="2023">2023</option>
+            <option value="2020">2020</option>
+            <option value="2015">2015</option>
+            <option value="2012">2012</option>
+        </select>
+        <button onclick="testMapUpdate()">Test Map Update</button>
+    </div>
+    <div class="status" id="status">
+        Current year: current<br>
+        Current URL: <span id="currentUrl">Loading...</span>
+    </div>
+    <div id="map"></div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map, satelliteLayer, currentSatelliteYear = 'current';
+        
+        function getSatelliteLayerUrl(year) {
+            const yearMapping = {
+                'current': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                '2023': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/{z}/{y}/{x}',
+                '2020': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R03/MapServer/tile/{z}/{y}/{x}',
+                '2015': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R06/MapServer/tile/{z}/{y}/{x}',
+                '2012': 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/R07/MapServer/tile/{z}/{y}/{x}'
+            };
+            return yearMapping[year] || yearMapping['current'];
+        }
+        
+        function setSatelliteYear(year) {
+            console.log(`Changing satellite year from ${currentSatelliteYear} to ${year}`);
+            currentSatelliteYear = year;
+            
+            // Remove the current satellite layer
+            if (map.hasLayer(satelliteLayer)) {
+                console.log('Removing old satellite layer');
+                map.removeLayer(satelliteLayer);
+            }
+            
+            // Create a new satellite layer with the new year
+            const newUrl = getSatelliteLayerUrl(year);
+            console.log(`Creating new satellite layer with URL: ${newUrl}`);
+            satelliteLayer = L.tileLayer(newUrl, {
+                attribution: '© Esri',
+                maxZoom: 25,
+                maxNativeZoom: 19
+            });
+            
+            // Add the new layer
+            map.addLayer(satelliteLayer);
+            
+            // FIXED: Force the layer to redraw to refresh tiles and bypass cache
+            console.log('Forcing layer redraw to refresh tiles');
+            satelliteLayer.redraw();
+            
+            // Update status
+            updateStatus();
+        }
+        
+        function updateStatus() {
+            const statusDiv = document.getElementById('status');
+            const urlSpan = document.getElementById('currentUrl');
+            const currentUrl = getSatelliteLayerUrl(currentSatelliteYear);
+            
+            statusDiv.innerHTML = `
+                Current year: ${currentSatelliteYear}<br>
+                Current URL: <span id="currentUrl">${currentUrl}</span>
+            `;
+        }
+        
+        function testMapUpdate() {
+            console.log('Testing map update...');
+            satelliteLayer.redraw();
+            map.invalidateSize();
+            console.log('Map update completed');
+        }
+        
+        function initMap() {
+            // Initialize map centered on NYC
+            map = L.map('map').setView([40.7128, -74.006], 13);
+            
+            // Create initial satellite layer
+            satelliteLayer = L.tileLayer(getSatelliteLayerUrl(currentSatelliteYear), {
+                attribution: '© Esri',
+                maxZoom: 25,
+                maxNativeZoom: 19
+            });
+            
+            satelliteLayer.addTo(map);
+            
+            // Update initial status
+            updateStatus();
+            
+            console.log('Map initialized with current satellite imagery');
+        }
+        
+        // Initialize when page loads
+        window.onload = initMap;
+    </script>
+</body>
+</html>
