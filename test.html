@@ -651,6 +651,8 @@
             // Add the new layer if satellite is currently selected
             if (currentLayer === 'satellite') {
                 map.addLayer(satelliteLayer);
+                // Force the layer to redraw to refresh tiles and bypass cache
+                satelliteLayer.redraw();
             }
         }
 
